@@ -12,7 +12,6 @@ call vundle#begin()
 Plugin 'gmarik/Vundle.vim'
 
 " My bundles
-Plugin 'ervandew/supertab'
 Plugin 'kchmck/vim-coffee-script'
 Plugin 'skwp/greplace.vim'
 Plugin 'tomtom/tcomment_vim'
@@ -27,22 +26,34 @@ Plugin 'tpope/vim-surround'
 Plugin 'tpope/vim-unimpaired'
 Plugin 'vim-ruby/vim-ruby'
 Plugin 'ctrlpvim/ctrlp.vim'
+Plugin 'digitaltoad/vim-pug'
 
 " Clojure
 Plugin 'tpope/vim-fireplace'
 
 " Elm
 Plugin 'ElmCast/elm-vim'
+" let g:elm_format_autosave = 1
+
 let g:elm_setup_keybindings = 0 " Get out of my bindings
-" Want this, but not showing errors:
-let g:elm_format_autosave = 1
+let g:elm_format_autosave = 0
 
 " Colors
 Plugin 'nanotech/jellybeans.vim'
 
+" --------- Snippets -------------------------
+Plugin 'SirVer/ultisnips'
+
+let g:UltiSnipsSnippetDirectories=[$HOME.'/.vim/UltiSnips']
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsEditSplit="vertical"
+" -------------------------------------------
+
+
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
 filetype plugin indent on    " required
+
 
 " ========================================================================
 " Ruby stuff
@@ -62,6 +73,12 @@ augroup myfiletypes
   " Clojure
   autocmd FileType clojure setlocal colorcolumn=80
   autocmd FileType clojure map <Leader>t :!lein test<cr>
+
+  " Elm
+  autocmd FileType elm map <Leader>t :ElmMake<cr>
+  autocmd FileType elm map <Leader>d :ElmErrorDetail<cr>
+  autocmd FileType elm map <Leader>o :!elm-test<cr>
+  autocmd FileType elm map <Leader>i :ElmFormat<cr>
 augroup END
 
 " Enable built-in matchit plugin
@@ -90,7 +107,7 @@ map <Leader>d orequire 'pry'<cr>binding.pry<esc>:w<cr>
 map <Leader>dr :e ~/Dropbox<cr>
 map <Leader>dj :e ~/Dropbox/notes/debugging_journal.txt<cr>
 map <Leader>ec :e ~/code/
-map <Leader>gw :!git add . && git commit -m 'WIP' && git push<cr>
+map <Leader>gw :cd %:p:h<cr>:!git add . && git commit -m 'WIP' && git push<cr>
 map <Leader>gl :e Gemfile.lock<cr>
 map <Leader>f :call OpenFactoryFile()<CR>
 map <Leader>fix :cnoremap % %<CR>
@@ -103,22 +120,20 @@ map <Leader>nn :sp ~/Dropbox/notes/programming_notes.txt<cr>
 map <Leader>nt :e! ~/Dropbox/docs/trailmix/todo.md<cr>
 map <Leader>o :w<cr>:call RunNearestSpec()<CR>
 map <Leader>p :set paste<CR><esc>"*]p:set nopaste<cr>
-map <Leader>pn :sp ~/Dropbox/work/thoughtbot/notes/project-notes.md<cr>
+map <Leader>pn :sp ~/Dropbox/work/tuple/project-notes.md<cr>
 map <Leader>q :copen<cr><cr>
 map <Leader>ra :%s/
-map <Leader>rd :!bundle exec rspec % --format documentation<CR>
 map <Leader>rs :vsp <C-r>#<cr><C-w>w
 map <Leader>rt q:?!ruby<cr><cr>
 map <Leader>rw :%s/\s\+$//<cr>:w<cr>
 map <Leader>sc :sp db/schema.rb<cr>
 map <Leader>sg :sp<cr>:grep<space>
-map <Leader>sj :call OpenJasmineSpecInBrowser()<cr>
 map <Leader>sm :RSmodel
 map <Leader>sp yss<p>
-map <Leader>sn :e ~/.vim/snippets/ruby.snippets<CR>
+map <Leader>sn :UltiSnipsEdit<CR>
 map <Leader>so :so %<cr>
 map <Leader>sq j<c-v>}klllcs<esc>:wq<cr>
-map <Leader>ss ds)i <esc>:w<cr>
+map <Leader>ss :!spring stop<cr>
 map <Leader>st :!ruby -Itest % -n "//"<left><left>
 map <Leader>su :RSunittest
 map <Leader>sv :RSview
@@ -142,7 +157,6 @@ map <Leader>s :split <C-R>=escape(expand("%:p:h"), ' ') . '/'<CR>
 map <Leader>v :vnew <C-R>=escape(expand("%:p:h"), ' ') . '/'<CR>
 
 map <C-h> :nohl<cr>
-imap <C-l> :<Space>
 " Note that remapping C-s requires flow control to be disabled
 " (e.g. in .bashrc or .zshrc)
 map <C-s> <esc>:w<CR>
@@ -270,19 +284,18 @@ endfunction
 
 " Make CtrlP use ag for listing the files. Way faster and no useless files.
 let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
-let g:ctrlp_use_caching = 0
+let g:ctrlp_use_caching = 1
+
+" Don't jump to a different place just because the file is already open, dingus
+let g:ctrlp_switch_buffer = 0
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Test-running stuff
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-"Now using thoughtbot/vim-rspec and tpope/dispatch.
-
 let g:rspec_command = "!clear && bin/rspec {spec}"
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-inoremap <Tab> <C-P>
 
 " Let's be reasonable, shall we?
 nmap k gk
@@ -296,7 +309,7 @@ let g:CommandTMatchWindowAtTop=1
 set timeoutlen=500
 
 " Remove trailing whitespace on save for ruby files.
-au BufWritePre *.rb :%s/\s\+$//e
+" au BufWritePre *.rb :%s/\s\+$//e
 
 function! OpenFactoryFile()
   if filereadable("test/factories.rb")
@@ -345,8 +358,14 @@ autocmd FileType markdown setlocal nolist wrap lbr
 " Wrap the quickfix window
 autocmd FileType qf setlocal wrap linebreak
 
+" Don't automatically continue comments after newline
+autocmd BufNewFile,BufRead * setlocal formatoptions-=cro
+
 " Make it more obviouser when lines are too long
 highlight ColorColumn ctermbg=235
+
+" Bullshit to make copy/paste work for High Sierra when vim is run inside tmux
+set clipboard=unnamed
 
 " ========================================================================
 " End of things set by me.

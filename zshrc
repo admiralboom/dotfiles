@@ -34,5 +34,13 @@ export PATH=$PATH:bin
 # Add my own dotfiles bin
 export PATH=$PATH:$HOME/.dotfiles/bin
 
-# RVM
-[[ -s "/Users/ben/.rvm/scripts/rvm" ]] && source "/Users/ben/.rvm/scripts/rvm"
+# Add homebrew's bin
+export PATH=$PATH:/usr/local/bin
+
+# Add stack's bin
+export PATH=$PATH:~/.local/bin
+
+# Update hombrew once a week
+export HOMEBREW_AUTO_UPDATE_SECS=600000
+
+export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"  # Added by n-install (see http://git.io/n-install-repo).
